@@ -30,7 +30,7 @@ export default function Home() {
         </p>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2">
-          <Link href="/family" className="group block">
+          <Link href="/family/login" className="group block">
             <Card className="flex h-full flex-col gap-4 p-6 transition-shadow group-hover:shadow-md">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Smartphone className="h-5 w-5" />

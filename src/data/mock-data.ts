@@ -46,6 +46,8 @@ export const familyChildren: FamilyChild[] = [
   },
 ];
 
+export const todayLabel = "Wednesday, 19 August 2026";
+
 export const attendanceWeek = [
   { day: "Mon", status: "present" as const },
   { day: "Tue", status: "present" as const },
@@ -65,6 +67,7 @@ export interface LearningObservation {
   note: string;
   author: string;
   tag: string;
+  hasImage?: boolean;
 }
 
 export const learningPortfolio: LearningObservation[] = [
@@ -74,6 +77,7 @@ export const learningPortfolio: LearningObservation[] = [
     note: "Ava explored the water table and shared tools with two friends, showing good turn-taking.",
     author: "Ms. Lee",
     tag: "Social & emotional development",
+    hasImage: true,
   },
   {
     title: "Counting game",
@@ -165,6 +169,10 @@ export const familyProfile = {
   linkedChildren: ["Ava", "Leo"],
   faceIdLogin: true,
 };
+
+export const hasUnreadNotifications = familyNotifications.some((group) =>
+  group.items.some((item) => item.unread),
+);
 
 // ---------------------------------------------------------------------------
 // Staff Portal — ICMS
