@@ -182,7 +182,11 @@ export const currentStaffUser = {
   name: "Maria Reyes",
   role: "Admin Officer",
   initials: "MR",
+  email: "m.reyes@littleexplorer.edu.au",
 };
+
+export const staffDashboardDate = "Wed, 19 August 2026";
+export const staffAttendanceDate = "19 Aug 2026";
 
 export const dashboardStats = {
   enrolledChildren: 112,

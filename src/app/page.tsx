@@ -51,7 +51,7 @@ export default function Home() {
             </Card>
           </Link>
 
-          <Link href="/staff" className="group block">
+          <Link href="/staff/login" className="group block">
             <Card className="flex h-full flex-col gap-4 p-6 transition-shadow group-hover:shadow-md">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10 text-accent">
                 <Monitor className="h-5 w-5" />
