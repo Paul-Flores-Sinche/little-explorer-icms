@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldCheck, type LucideIcon } from "lucide-react";
+import { ArrowLeft, ShieldCheck, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -81,6 +81,14 @@ export function Sidebar({ items, footerItems, user }: SidebarProps) {
           </p>
         </div>
       </div>
+
+      <Link
+        href="/"
+        className="mt-3 flex items-center gap-1.5 px-2 text-xs text-primary-foreground/60 transition-colors hover:text-primary-foreground/90"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Back to home
+      </Link>
     </aside>
   );
 }

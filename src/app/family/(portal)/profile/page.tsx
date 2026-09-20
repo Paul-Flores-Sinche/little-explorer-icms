@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Home } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -127,6 +127,14 @@ export default function ProfilePage() {
               className={cn(buttonVariants({ variant: "destructive" }), "w-full")}
             >
               Log Out
+            </Link>
+
+            <Link
+              href="/"
+              className="flex items-center justify-center gap-1.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Home className="h-3.5 w-3.5" />
+              Back to home
             </Link>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,14 @@ export default function StaffLoginPage() {
 
       <div className="flex flex-1 flex-col justify-center bg-background px-6 py-12 sm:px-10 md:px-20">
         <div className="mx-auto w-full max-w-sm">
+          <Link
+            href="/"
+            className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to home
+          </Link>
+
           <h1 className="font-heading text-3xl font-extrabold text-foreground md:text-4xl">
             Staff sign in
           </h1>
