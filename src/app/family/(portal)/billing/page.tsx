@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FakeSuccessBanner } from "@/components/fake-success-banner";
 import { MobilePageHeader } from "@/components/family/mobile-page-header";
+import { PaymentSheet } from "@/components/family/payment/payment-sheet";
 import { familyBilling, type Invoice } from "@/data/mock-data";
 
 function InvoiceList({ invoices }: { invoices: Invoice[] }) {
@@ -80,9 +81,21 @@ function InvoiceTable({ invoices }: { invoices: Invoice[] }) {
 
 export default function BillingPage() {
   const [message, setMessage] = useState<string | null>(null);
-  const paidInvoices = familyBilling.invoices.filter(
-    (invoice) => invoice.status === "Paid",
-  );
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [balance, setBalance] = useState(familyBilling.currentBalance);
+  const [invoices, setInvoices] = useState<Invoice[]>(familyBilling.invoices);
+  const paidInvoices = invoices.filter((invoice) => invoice.status === "Paid");
+
+  function handlePaymentSuccess() {
+    setBalance(0);
+    setInvoices((prev) =>
+      prev.map((invoice) =>
+        invoice.status === "Due" || invoice.status === "Overdue"
+          ? { ...invoice, balance: 0, status: "Paid" }
+          : invoice,
+      ),
+    );
+  }
 
   return (
     <>
@@ -108,7 +121,7 @@ export default function BillingPage() {
                 Current balance
               </p>
               <p className="font-heading text-4xl font-bold">
-                ${familyBilling.currentBalance.toFixed(2)}
+                ${balance.toFixed(2)}
               </p>
               <p className="mt-1 text-sm text-primary-foreground/70">
                 Includes CCS subsidy · Due {familyBilling.dueDate}
@@ -117,7 +130,8 @@ export default function BillingPage() {
             <div className="flex flex-col gap-3">
               <Button
                 variant="accent"
-                onClick={() => setMessage("Payment received — thank you!")}
+                disabled={balance <= 0}
+                onClick={() => setPaymentOpen(true)}
               >
                 Pay Now
               </Button>
@@ -143,7 +157,7 @@ export default function BillingPage() {
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="invoices">
-                  <InvoiceList invoices={familyBilling.invoices} />
+                  <InvoiceList invoices={invoices} />
                 </TabsContent>
                 <TabsContent value="history">
                   <InvoiceList invoices={paidInvoices} />
@@ -155,11 +169,18 @@ export default function BillingPage() {
               <h2 className="mb-4 font-heading text-lg font-bold text-foreground">
                 Invoices &amp; payment history
               </h2>
-              <InvoiceTable invoices={familyBilling.invoices} />
+              <InvoiceTable invoices={invoices} />
             </Card>
           </div>
         </div>
       </div>
+
+      <PaymentSheet
+        open={paymentOpen}
+        amount={familyBilling.currentBalance}
+        onClose={() => setPaymentOpen(false)}
+        onSuccess={handlePaymentSuccess}
+      />
     </>
   );
 }
