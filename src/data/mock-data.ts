@@ -175,6 +175,208 @@ export const hasUnreadNotifications = familyNotifications.some((group) =>
 );
 
 // ---------------------------------------------------------------------------
+// Shared — Enquiries (Family <-> Staff, backed by a localStorage-persisted
+// React Context in src/components/shared/enquiry-store.tsx)
+// ---------------------------------------------------------------------------
+
+export const enquiryTypes = [
+  "Fees & payments",
+  "Room availability & places per room",
+  "Waitlist status",
+  "New enrolment / waitlist",
+  "Enrolment & booking changes",
+  "CCS (Child Care Subsidy) question",
+  "Attendance & absences",
+  "Health, safety & incidents",
+  "Programs & learning",
+  "Other",
+] as const;
+
+export type EnquiryType = (typeof enquiryTypes)[number];
+
+export type EnquiryStatus = "New" | "In progress" | "Waiting on family" | "Resolved";
+export type EnquiryPriority = "Normal" | "Urgent";
+export type ContactPreference = "Email" | "Phone" | "Portal";
+
+export interface EnquiryMessage {
+  from: "family" | "staff";
+  text: string;
+  date: string;
+}
+
+export interface Enquiry {
+  id: string;
+  reference: string;
+  type: EnquiryType;
+  family: string;
+  childName?: string;
+  room?: string;
+  message: string;
+  priority: EnquiryPriority;
+  contactPreference: ContactPreference;
+  status: EnquiryStatus;
+  date: string;
+  internalNotes: string;
+  assignedTo: string | null;
+  /** True once staff has updated the enquiry since the family last viewed it. */
+  familyUnread: boolean;
+  thread: EnquiryMessage[];
+}
+
+export const staffDirectory = [
+  "Maria Reyes",
+  "Ms. Lee",
+  "Mr. Diaz",
+  "Ms. Ferreira",
+  "Mr. Nolan",
+  "Ms. Okafor",
+];
+
+export const enquiryReplyTemplates: Record<EnquiryType, string[]> = {
+  "Fees & payments": [
+    "Thanks for reaching out. I've reviewed your account — you can see the latest balance and invoices in the Billing tab.",
+    "I've applied the adjustment to your account. The updated balance should appear within 24 hours.",
+  ],
+  "Room availability & places per room": [
+    "Thanks for checking in — that room currently has limited availability. I'll confirm exact vacancies shortly.",
+    "Good news — a place has opened up in the room you asked about. Let us know if you'd like us to hold it for you.",
+  ],
+  "Waitlist status": [
+    "You're still on the waitlist — I've confirmed your current position and will update you as soon as it changes.",
+    "Your waitlist position has moved up. We'll be in touch as soon as a place becomes available.",
+  ],
+  "New enrolment / waitlist": [
+    "Thanks for your enquiry! I've added your child to our waitlist and will be in touch as soon as a place becomes available.",
+    "We're pleased to offer your child a place — please confirm by replying here or calling the centre.",
+  ],
+  "Enrolment & booking changes": [
+    "I've noted your requested booking change and will confirm availability shortly.",
+    "Your booking has been updated as requested. Let us know if anything else needs adjusting.",
+  ],
+  "CCS (Child Care Subsidy) question": [
+    "Thanks for your question — I've checked your CCS details and everything looks up to date on our end.",
+    "It looks like your CCS assessment may need updating with Services Australia. Happy to help if you'd like guidance.",
+  ],
+  "Attendance & absences": [
+    "Thanks for letting us know — I've recorded the absence against your child's attendance record.",
+    "Noted, thank you. Please remember to notify us by 9am on the day where possible.",
+  ],
+  "Health, safety & incidents": [
+    "Thank you for flagging this — I've logged it and our team is following up today.",
+    "I've reviewed this with the room leader. Please let us know if you have any further questions.",
+  ],
+  "Programs & learning": [
+    "Thanks for your interest — I've passed this on to the educators in your child's room.",
+    "Great question! I've asked the room leader to share more detail on the program with you directly.",
+  ],
+  Other: ["Thanks for reaching out — I'll look into this and get back to you shortly."],
+};
+
+export const seedEnquiries: Enquiry[] = [
+  {
+    id: "enq-seed-leo",
+    reference: "ENQ-10231",
+    type: "New enrolment / waitlist",
+    family: "Thompson",
+    childName: "Leo Thompson",
+    room: "Toddlers",
+    message:
+      "Preferred start date: Term 4, 2026\nWe'd like to add Leo to the Toddlers waitlist ahead of his 2nd birthday.",
+    priority: "Normal",
+    contactPreference: "Email",
+    status: "Resolved",
+    date: "12 Jul 2026",
+    internalNotes: "Added to Toddlers waitlist at position #3.",
+    assignedTo: "Maria Reyes",
+    familyUnread: false,
+    thread: [
+      {
+        from: "family",
+        text: "We'd like to add Leo to the Toddlers waitlist ahead of his 2nd birthday.",
+        date: "12 Jul 2026",
+      },
+      {
+        from: "staff",
+        text: "Thanks for your enquiry! I've added Leo to our Toddlers waitlist — he's currently #3 of 11. We'll be in touch as soon as a place becomes available.",
+        date: "13 Jul 2026",
+      },
+    ],
+  },
+  {
+    id: "enq-seed-maya",
+    reference: "ENQ-10254",
+    type: "New enrolment / waitlist",
+    family: "Chen",
+    childName: "Maya Chen",
+    room: "Nursery",
+    message: "Preferred start date: Term 1, 2027\nLooking for a Nursery place starting early next year.",
+    priority: "Normal",
+    contactPreference: "Phone",
+    status: "In progress",
+    date: "20 Jul 2026",
+    internalNotes: "Checking Nursery capacity for Term 1 2027 before confirming a waitlist position.",
+    assignedTo: "Ms. Ferreira",
+    familyUnread: false,
+    thread: [
+      { from: "family", text: "Looking for a Nursery place starting early next year.", date: "20 Jul 2026" },
+    ],
+  },
+  {
+    id: "enq-seed-noah",
+    reference: "ENQ-10267",
+    type: "New enrolment / waitlist",
+    family: "Ali",
+    childName: "Noah Ali",
+    room: "Kindergarten",
+    message:
+      "Preferred start date: Term 4, 2026\nCould you confirm what documents you need from us to finalise the enrolment?",
+    priority: "Urgent",
+    contactPreference: "Email",
+    status: "Waiting on family",
+    date: "25 Jul 2026",
+    internalNotes: "Awaiting an up-to-date immunisation record before we can confirm the offer.",
+    assignedTo: "Maria Reyes",
+    familyUnread: false,
+    thread: [
+      {
+        from: "family",
+        text: "Could you confirm what documents you need from us to finalise the enrolment?",
+        date: "25 Jul 2026",
+      },
+      {
+        from: "staff",
+        text: "Thanks for reaching out — we just need an up-to-date immunisation record before we can confirm the offer. Could you upload or email that through?",
+        date: "26 Jul 2026",
+      },
+    ],
+  },
+  {
+    id: "enq-seed-zara",
+    reference: "ENQ-10289",
+    type: "New enrolment / waitlist",
+    family: "Nguyen",
+    childName: "Zara Nguyen",
+    room: "Preschool",
+    message: "Preferred start date: Term 4, 2026\nHoping to join the Preschool waitlist.",
+    priority: "Normal",
+    contactPreference: "Portal",
+    status: "Resolved",
+    date: "28 Jul 2026",
+    internalNotes: "Added to Preschool waitlist at position #2.",
+    assignedTo: "Ms. Okafor",
+    familyUnread: false,
+    thread: [
+      { from: "family", text: "Hoping to join the Preschool waitlist.", date: "28 Jul 2026" },
+      {
+        from: "staff",
+        text: "You're on the list! Zara is currently #2 on the Preschool waitlist — we'll reach out as soon as a place opens.",
+        date: "29 Jul 2026",
+      },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Staff Portal — ICMS
 // ---------------------------------------------------------------------------
 
@@ -209,23 +411,6 @@ export const roomOccupancy: RoomOccupancy[] = [
 ];
 
 export const signOffStatus = { signedOff: 87, pending: 13 };
-
-export interface WaitlistEntry {
-  child: string;
-  family: string;
-  room: string;
-  status: "Waitlisted #1" | "Waitlisted #2" | "Waitlisted #3" | "New enquiry" | "Enrolled";
-  date: string;
-}
-
-export const waitlistEnquiries: WaitlistEntry[] = [
-  { child: "Leo Thompson", family: "Thompson", room: "Toddlers", status: "Waitlisted #3", date: "12 Jul 2026" },
-  { child: "Maya Chen", family: "Chen", room: "Nursery", status: "Waitlisted #1", date: "20 Jul 2026" },
-  { child: "Noah Ali", family: "Ali", room: "Kindergarten", status: "New enquiry", date: "25 Jul 2026" },
-  { child: "Zara Nguyen", family: "Nguyen", room: "Preschool", status: "Waitlisted #2", date: "28 Jul 2026" },
-  { child: "Ava Thompson", family: "Thompson", room: "Kindergarten", status: "Enrolled", date: "3 Feb 2025" },
-  { child: "Isla Brown", family: "Brown", room: "Preschool", status: "Enrolled", date: "14 Jan 2024" },
-];
 
 export const attendanceRooms = ["Nursery", "Toddlers", "Kindergarten", "Preschool"] as const;
 

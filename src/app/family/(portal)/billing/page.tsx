@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FakeSuccessBanner } from "@/components/fake-success-banner";
 import { MobilePageHeader } from "@/components/family/mobile-page-header";
+import { usePayment } from "@/components/family/payment/payment-context";
 import { PaymentSheet } from "@/components/family/payment/payment-sheet";
 import { familyBilling, type Invoice } from "@/data/mock-data";
 
@@ -82,20 +83,8 @@ function InvoiceTable({ invoices }: { invoices: Invoice[] }) {
 export default function BillingPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [balance, setBalance] = useState(familyBilling.currentBalance);
-  const [invoices, setInvoices] = useState<Invoice[]>(familyBilling.invoices);
+  const { balance, invoices, dueDate, markPaid } = usePayment();
   const paidInvoices = invoices.filter((invoice) => invoice.status === "Paid");
-
-  function handlePaymentSuccess() {
-    setBalance(0);
-    setInvoices((prev) =>
-      prev.map((invoice) =>
-        invoice.status === "Due" || invoice.status === "Overdue"
-          ? { ...invoice, balance: 0, status: "Paid" }
-          : invoice,
-      ),
-    );
-  }
 
   return (
     <>
@@ -124,7 +113,7 @@ export default function BillingPage() {
                 ${balance.toFixed(2)}
               </p>
               <p className="mt-1 text-sm text-primary-foreground/70">
-                Includes CCS subsidy · Due {familyBilling.dueDate}
+                Includes CCS subsidy · Due {dueDate}
               </p>
             </div>
             <div className="flex flex-col gap-3">
@@ -133,7 +122,7 @@ export default function BillingPage() {
                 disabled={balance <= 0}
                 onClick={() => setPaymentOpen(true)}
               >
-                Pay Now
+                {balance <= 0 ? "Paid" : "Pay Now"}
               </Button>
               <Button
                 variant="outline"
@@ -179,7 +168,7 @@ export default function BillingPage() {
         open={paymentOpen}
         amount={familyBilling.currentBalance}
         onClose={() => setPaymentOpen(false)}
-        onSuccess={handlePaymentSuccess}
+        onSuccess={markPaid}
       />
     </>
   );

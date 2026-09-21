@@ -1,38 +1,49 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { CirclePlus, Search } from "lucide-react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Search } from "lucide-react";
 
 import { Badge, type BadgeProps } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { FakeSuccessBanner } from "@/components/fake-success-banner";
 import { PageHeader } from "@/components/staff/page-header";
-import {
-  dashboardStats,
-  roomOccupancy,
-  waitlistEnquiries,
-  type WaitlistEntry,
-} from "@/data/mock-data";
+import { EnquiryDetailPanel } from "@/components/staff/enquiry-detail-panel";
+import { useEnquiries } from "@/components/shared/enquiry-store";
+import { dashboardStats, roomOccupancy, type Enquiry, type EnquiryStatus } from "@/data/mock-data";
 import { cn } from "@/lib/utils";
 
-const statusVariant: Record<WaitlistEntry["status"], BadgeProps["variant"]> = {
-  "Waitlisted #1": "warning",
-  "Waitlisted #2": "warning",
-  "Waitlisted #3": "warning",
-  "New enquiry": "info",
-  Enrolled: "success",
+const statusVariant: Record<EnquiryStatus, BadgeProps["variant"]> = {
+  New: "danger",
+  "In progress": "info",
+  "Waiting on family": "warning",
+  Resolved: "success",
 };
 
-export default function EnrolmentsPage() {
-  const [submitted, setSubmitted] = useState(false);
+const statusOrder: Record<EnquiryStatus, number> = {
+  New: 0,
+  "In progress": 1,
+  "Waiting on family": 2,
+  Resolved: 3,
+};
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitted(true);
-  }
+function sortEnquiries(enquiries: Enquiry[]) {
+  return [...enquiries].sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+}
+
+function EnrolmentsPageContent() {
+  const { enquiries } = useEnquiries();
+  const searchParams = useSearchParams();
+  const preselected = searchParams.get("enquiry");
+  const [selectedId, setSelectedId] = useState<string | null>(preselected);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs selection with the ?enquiry= URL param when it changes (e.g. repeated bell-dropdown navigation on the same route)
+    if (preselected) setSelectedId(preselected);
+  }, [preselected]);
+
+  const sorted = useMemo(() => sortEnquiries(enquiries), [enquiries]);
+  const selected = sorted.find((enquiry) => enquiry.id === selectedId) ?? null;
 
   return (
     <>
@@ -41,10 +52,6 @@ export default function EnrolmentsPage() {
           <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input placeholder="Search families or children" className="w-72 pl-9" />
         </div>
-        <a href="#new-enquiry-form" className={cn(buttonVariants(), "gap-2")}>
-          <CirclePlus className="h-4 w-4" />
-          New Enquiry
-        </a>
       </PageHeader>
 
       <div className="grid grid-cols-[1fr_360px] gap-6 px-8 py-6">
@@ -52,7 +59,7 @@ export default function EnrolmentsPage() {
           <div className="mb-4 flex items-center gap-6 border-b border-border pb-4">
             <span className="flex items-center gap-2 text-sm font-semibold text-primary">
               Waitlist &amp; Enquiries
-              <Badge variant="neutral">{waitlistEnquiries.length}</Badge>
+              <Badge variant="neutral">{sorted.length}</Badge>
             </span>
             <span className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
               Enrolled Children
@@ -63,22 +70,31 @@ export default function EnrolmentsPage() {
             <thead>
               <tr className="border-b border-border text-xs tracking-wide text-muted-foreground uppercase">
                 <th className="pb-3 font-semibold">Child</th>
+                <th className="pb-3 font-semibold">Type</th>
                 <th className="pb-3 font-semibold">Family</th>
-                <th className="pb-3 font-semibold">Room Requested</th>
+                <th className="pb-3 font-semibold">Room</th>
                 <th className="pb-3 font-semibold">Status</th>
                 <th className="pb-3 font-semibold">Date</th>
               </tr>
             </thead>
             <tbody>
-              {waitlistEnquiries.map((entry) => (
-                <tr key={entry.child} className="border-b border-border last:border-0">
-                  <td className="py-3 font-medium text-foreground">{entry.child}</td>
-                  <td className="py-3 text-foreground">{entry.family}</td>
-                  <td className="py-3 text-foreground">{entry.room}</td>
+              {sorted.map((enquiry) => (
+                <tr
+                  key={enquiry.id}
+                  onClick={() => setSelectedId(enquiry.id)}
+                  className={cn(
+                    "cursor-pointer border-b border-border last:border-0 hover:bg-muted",
+                    selectedId === enquiry.id && "bg-muted",
+                  )}
+                >
+                  <td className="py-3 font-medium text-foreground">{enquiry.childName ?? "—"}</td>
+                  <td className="py-3 text-foreground">{enquiry.type}</td>
+                  <td className="py-3 text-foreground">{enquiry.family}</td>
+                  <td className="py-3 text-foreground">{enquiry.room ?? "—"}</td>
                   <td className="py-3">
-                    <Badge variant={statusVariant[entry.status]}>{entry.status}</Badge>
+                    <Badge variant={statusVariant[enquiry.status]}>{enquiry.status}</Badge>
                   </td>
-                  <td className="py-3 text-foreground">{entry.date}</td>
+                  <td className="py-3 text-foreground">{enquiry.date}</td>
                 </tr>
               ))}
             </tbody>
@@ -115,48 +131,17 @@ export default function EnrolmentsPage() {
             </div>
           </Card>
 
-          <Card id="new-enquiry-form" className="p-6">
-            <h2 className="mb-4 font-heading text-lg font-bold text-foreground">
-              New enquiry
-            </h2>
-            {submitted ? (
-              <FakeSuccessBanner
-                message="Child added to the waitlist."
-                onDismiss={() => setSubmitted(false)}
-              />
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-foreground">
-                    Child name
-                  </label>
-                  <Input placeholder="Full name" required />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-foreground">
-                    Preferred room
-                  </label>
-                  <Select defaultValue="Nursery">
-                    <option>Nursery</option>
-                    <option>Toddlers</option>
-                    <option>Kindergarten</option>
-                    <option>Preschool</option>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-foreground">
-                    Preferred start date
-                  </label>
-                  <Input placeholder="dd/mm/yyyy" required />
-                </div>
-                <Button type="submit" className="w-full">
-                  Add to Waitlist
-                </Button>
-              </form>
-            )}
-          </Card>
+          <EnquiryDetailPanel enquiry={selected} />
         </div>
       </div>
     </>
+  );
+}
+
+export default function EnrolmentsPage() {
+  return (
+    <Suspense fallback={null}>
+      <EnrolmentsPageContent />
+    </Suspense>
   );
 }

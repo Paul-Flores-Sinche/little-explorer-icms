@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Sidebar, type SidebarNavItem } from "@/components/sidebar";
+import { useEnquiries } from "@/components/shared/enquiry-store";
 import { currentStaffUser } from "@/data/mock-data";
 
 const navItems: SidebarNavItem[] = [
@@ -36,9 +37,16 @@ export default function StaffPortalLayout({
 }: {
   children: ReactNode;
 }) {
+  const { resetDemo } = useEnquiries();
+
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar items={navItems} footerItems={footerItems} user={currentStaffUser} />
+      <Sidebar
+        items={navItems}
+        footerItems={footerItems}
+        onResetDemo={resetDemo}
+        user={currentStaffUser}
+      />
       <main className="flex-1">{children}</main>
     </div>
   );

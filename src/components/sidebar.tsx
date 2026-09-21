@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, ShieldCheck, type LucideIcon } from "lucide-react";
+import { ArrowLeft, RefreshCcw, ShieldCheck, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,7 @@ interface SidebarUser {
 interface SidebarProps {
   items: SidebarNavItem[];
   footerItems?: SidebarNavItem[];
+  onResetDemo?: () => void;
   user: SidebarUser;
 }
 
@@ -42,7 +43,7 @@ function SidebarLink({ href, label, icon: Icon }: SidebarNavItem) {
   );
 }
 
-export function Sidebar({ items, footerItems, user }: SidebarProps) {
+export function Sidebar({ items, footerItems, onResetDemo, user }: SidebarProps) {
   return (
     <aside className="hidden w-72 shrink-0 flex-col bg-primary px-4 py-6 text-primary-foreground md:flex">
       <div className="flex items-center gap-2 px-2 pb-8">
@@ -82,13 +83,25 @@ export function Sidebar({ items, footerItems, user }: SidebarProps) {
         </div>
       </div>
 
-      <Link
-        href="/"
-        className="mt-3 flex items-center gap-1.5 px-2 text-xs text-primary-foreground/60 transition-colors hover:text-primary-foreground/90"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Back to home
-      </Link>
+      <div className="mt-3 flex items-center justify-between px-2">
+        <Link
+          href="/"
+          className="flex items-center gap-1.5 text-xs text-primary-foreground/60 transition-colors hover:text-primary-foreground/90"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to home
+        </Link>
+        {onResetDemo && (
+          <button
+            type="button"
+            onClick={onResetDemo}
+            className="flex items-center gap-1.5 text-xs text-primary-foreground/60 transition-colors hover:text-primary-foreground/90"
+          >
+            <RefreshCcw className="h-3.5 w-3.5" />
+            Reset demo
+          </button>
+        )}
+      </div>
     </aside>
   );
 }

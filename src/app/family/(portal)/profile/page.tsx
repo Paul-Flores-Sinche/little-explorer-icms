@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { ChevronRight, Home } from "lucide-react";
+import { ChevronRight, Home, RefreshCcw } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { FakeSuccessBanner } from "@/components/fake-success-banner";
 import { MobilePageHeader } from "@/components/family/mobile-page-header";
+import { useEnquiries } from "@/components/shared/enquiry-store";
 import { currentFamilyUser, familyProfile } from "@/data/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,12 @@ function ProfileRow({
 export default function ProfilePage() {
   const [faceId, setFaceId] = useState(familyProfile.faceIdLogin);
   const [message, setMessage] = useState<string | null>(null);
+  const { resetDemo } = useEnquiries();
+
+  function handleResetDemo() {
+    resetDemo();
+    setMessage("Demo data has been reset.");
+  }
 
   return (
     <>
@@ -129,13 +136,23 @@ export default function ProfilePage() {
               Log Out
             </Link>
 
-            <Link
-              href="/"
-              className="flex items-center justify-center gap-1.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <Home className="h-3.5 w-3.5" />
-              Back to home
-            </Link>
+            <div className="flex items-center justify-center gap-5">
+              <Link
+                href="/"
+                className="flex items-center justify-center gap-1.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Home className="h-3.5 w-3.5" />
+                Back to home
+              </Link>
+              <button
+                type="button"
+                onClick={handleResetDemo}
+                className="flex items-center justify-center gap-1.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <RefreshCcw className="h-3.5 w-3.5" />
+                Reset demo
+              </button>
+            </div>
           </div>
         </div>
       </div>

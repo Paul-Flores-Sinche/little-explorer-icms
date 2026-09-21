@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Baloo_2, Manrope } from "next/font/google";
+
+import { EnquiryProvider } from "@/components/shared/enquiry-store";
+
 import "./globals.css";
 
 const baloo = Baloo_2({
@@ -24,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${baloo.variable} ${manrope.variable} h-full`}>
       <body className="flex min-h-full flex-col font-sans antialiased">
-        {children}
+        <EnquiryProvider>{children}</EnquiryProvider>
       </body>
     </html>
   );

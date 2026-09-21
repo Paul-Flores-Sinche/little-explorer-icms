@@ -4,8 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, ShieldCheck } from "lucide-react";
 
+import { useEnquiries } from "@/components/shared/enquiry-store";
 import { cn } from "@/lib/utils";
 import { currentFamilyUser, hasUnreadNotifications } from "@/data/mock-data";
+
+const CURRENT_FAMILY = "Thompson";
 
 const links = [
   { href: "/family", label: "Home" },
@@ -16,6 +19,11 @@ const links = [
 
 export function FamilyTopNav() {
   const pathname = usePathname();
+  const { enquiries } = useEnquiries();
+  const hasUnreadEnquiries = enquiries.some(
+    (enquiry) => enquiry.family === CURRENT_FAMILY && enquiry.familyUnread,
+  );
+  const hasUnread = hasUnreadNotifications || hasUnreadEnquiries;
 
   return (
     <header className="hidden items-center justify-between border-b border-border bg-card px-8 py-4 md:flex">
@@ -52,7 +60,7 @@ export function FamilyTopNav() {
           className="relative text-foreground"
         >
           <Bell className="h-5 w-5" />
-          {hasUnreadNotifications && (
+          {hasUnread && (
             <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent" />
           )}
         </Link>

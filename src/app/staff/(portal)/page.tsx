@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Bell, ChevronDown, CirclePlus } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FakeSuccessBanner } from "@/components/fake-success-banner";
 import { PageHeader } from "@/components/staff/page-header";
+import { StaffNotificationBell } from "@/components/staff/notification-bell";
 import { StatTile } from "@/components/stat-tile";
+import { useEnquiries } from "@/components/shared/enquiry-store";
 import {
   dashboardStats,
   roomOccupancy,
@@ -58,6 +60,8 @@ function SignOffDonut({ signedOff }: { signedOff: number }) {
 
 export default function StaffDashboardPage() {
   const [message, setMessage] = useState<string | null>(null);
+  const { enquiries } = useEnquiries();
+  const enquiriesToResolve = enquiries.filter((enquiry) => enquiry.status !== "Resolved").length;
 
   return (
     <>
@@ -66,9 +70,7 @@ export default function StaffDashboardPage() {
           All Rooms
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </span>
-        <button type="button" aria-label="Notifications" className="text-foreground">
-          <Bell className="h-5 w-5" />
-        </button>
+        <StaffNotificationBell />
       </PageHeader>
 
       <div className="space-y-6 px-8 py-6">
@@ -76,7 +78,7 @@ export default function StaffDashboardPage() {
           <FakeSuccessBanner message={message} onDismiss={() => setMessage(null)} />
         )}
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           <StatTile
             label="Enrolled Children"
             value={dashboardStats.enrolledChildren}
@@ -108,6 +110,14 @@ export default function StaffDashboardPage() {
               </>
             }
           />
+          <Link href="/staff/enrolments" className="block">
+            <StatTile
+              label="Enquiries to Resolve"
+              value={enquiriesToResolve}
+              valueClassName="text-accent"
+              className="h-full transition-colors hover:bg-muted"
+            />
+          </Link>
         </div>
 
         <div className="grid grid-cols-[1fr_360px] gap-6">
@@ -166,8 +176,10 @@ export default function StaffDashboardPage() {
               href="/staff/enrolments"
               className={cn(buttonVariants(), "gap-2")}
             >
-              <CirclePlus className="h-4 w-4" />
-              New Enquiry
+              Review Enquiries
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1.5 text-xs font-bold">
+                {enquiriesToResolve}
+              </span>
             </Link>
             <Link
               href="/staff/enrolments"

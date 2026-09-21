@@ -15,6 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FakeSuccessBanner } from "@/components/fake-success-banner";
+import { usePayment } from "@/components/family/payment/payment-context";
+import { PaymentSheet } from "@/components/family/payment/payment-sheet";
+import { useEnquiries } from "@/components/shared/enquiry-store";
 import {
   currentFamilyUser,
   familyBilling,
@@ -27,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 const ava = familyChildren[0];
 const latestObservation = learningPortfolio[0];
+const CURRENT_FAMILY = "Thompson";
 
 interface QuickAction {
   label: string;
@@ -37,6 +41,12 @@ interface QuickAction {
 
 export default function FamilyHomePage() {
   const [message, setMessage] = useState<string | null>(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const { balance, markPaid } = usePayment();
+  const { enquiries } = useEnquiries();
+  const hasUnread =
+    hasUnreadNotifications ||
+    enquiries.some((enquiry) => enquiry.family === CURRENT_FAMILY && enquiry.familyUnread);
 
   const quickActions: QuickAction[] = [
     { label: "New Enquiry", icon: CirclePlus, href: "/family/enquiry" },
@@ -68,7 +78,7 @@ export default function FamilyHomePage() {
             className="relative text-foreground"
           >
             <Bell className="h-5 w-5" />
-            {hasUnreadNotifications && (
+            {hasUnread && (
               <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent" />
             )}
           </Link>
@@ -155,18 +165,17 @@ export default function FamilyHomePage() {
                     Current balance
                   </p>
                   <p className="font-heading text-3xl font-bold">
-                    ${familyBilling.currentBalance.toFixed(2)}
+                    ${balance.toFixed(2)}
                   </p>
                 </div>
                 <div className="flex gap-3">
                   <Button
                     variant="accent"
                     className="flex-1"
-                    onClick={() =>
-                      setMessage("Payment received — thank you!")
-                    }
+                    disabled={balance <= 0}
+                    onClick={() => setPaymentOpen(true)}
                   >
-                    Pay Now
+                    {balance <= 0 ? "Paid" : "Pay Now"}
                   </Button>
                   <Link
                     href="/family/billing"
@@ -220,6 +229,13 @@ export default function FamilyHomePage() {
           </div>
         </div>
       </div>
+
+      <PaymentSheet
+        open={paymentOpen}
+        amount={familyBilling.currentBalance}
+        onClose={() => setPaymentOpen(false)}
+        onSuccess={markPaid}
+      />
     </>
   );
 }

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Bell, CreditCard, Home, User, UserRound } from "lucide-react";
 
 import { BottomNav, type NavItem } from "@/components/bottom-nav";
+import { PaymentProvider } from "@/components/family/payment/payment-context";
 import { FamilyTopNav } from "@/components/family/top-nav";
 
 const bottomNavItems: NavItem[] = [
@@ -20,10 +21,12 @@ export default function FamilyPortalLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-1 flex-col bg-background">
-      <FamilyTopNav />
-      <main className="flex-1 pb-20 md:pb-0">{children}</main>
-      <BottomNav items={bottomNavItems} />
-    </div>
+    <PaymentProvider>
+      <div className="flex min-h-screen flex-1 flex-col bg-background">
+        <FamilyTopNav />
+        <main className="flex-1 pb-20 md:pb-0">{children}</main>
+        <BottomNav items={bottomNavItems} />
+      </div>
+    </PaymentProvider>
   );
 }
