@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Baloo_2, Manrope } from "next/font/google";
 
 import { EnquiryProvider } from "@/components/shared/enquiry-store";
+import { ToastProvider } from "@/components/ui/toast";
 
 import "./globals.css";
 
@@ -27,7 +28,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${baloo.variable} ${manrope.variable} h-full`}>
       <body className="flex min-h-full flex-col font-sans antialiased">
-        <EnquiryProvider>{children}</EnquiryProvider>
+        <ToastProvider>
+          <EnquiryProvider>{children}</EnquiryProvider>
+        </ToastProvider>
       </body>
     </html>
   );
