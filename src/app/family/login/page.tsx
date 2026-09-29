@@ -3,6 +3,7 @@ import { ArrowLeft, ShieldCheck } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ForgotPassword } from "@/components/shared/forgot-password";
 import { currentFamilyUser } from "@/data/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -69,9 +70,11 @@ export default function FamilyLoginPage() {
               </label>
               <Input id="password" type="password" defaultValue="password123" />
               <div className="flex justify-end pt-1">
-                <span className="cursor-default text-sm font-semibold text-primary">
-                  Forgot your password?
-                </span>
+                <ForgotPassword
+                  portal="family"
+                  defaultEmail={currentFamilyUser.email}
+                  phoneHint="0412 345 678"
+                />
               </div>
             </div>
 

@@ -6,6 +6,7 @@ import { CirclePlus, Paperclip } from "lucide-react";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,7 +23,10 @@ import {
   type EnquiryPriority,
   type EnquiryType,
 } from "@/data/mock-data";
+import { addDays, formatShort } from "@/lib/dates";
+import { useToday } from "@/lib/use-now";
 import { cn } from "@/lib/utils";
+import { isValidEmail, isValidPhone } from "@/lib/validation";
 
 const CURRENT_FAMILY = "Thompson";
 const MESSAGE_LIMIT = 500;
@@ -188,14 +192,31 @@ function EnquiryList({ onSubmitNew }: EnquiryListProps) {
   );
 }
 
-function FormField({ label, children }: { label: string; children: ReactNode }) {
+function FormField({
+  label,
+  htmlFor,
+  error,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  error?: string | null;
+  children: ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-semibold text-foreground">{label}</label>
+      <label htmlFor={htmlFor} className="text-sm font-semibold text-foreground">
+        {label}
+      </label>
       {children}
+      {error && <p className="text-xs text-danger-foreground">{error}</p>}
     </div>
   );
 }
+
+type FieldErrors = Partial<
+  Record<"description" | "dob" | "preferredStart" | "contactDetail" | "childName", string>
+>;
 
 interface EnquiryFormProps {
   onSubmitted: (reference: string) => void;
@@ -203,54 +224,80 @@ interface EnquiryFormProps {
 
 function EnquiryForm({ onSubmitted }: EnquiryFormProps) {
   const { addEnquiry } = useEnquiries();
+  const today = useToday();
 
   const [type, setType] = useState<EnquiryType>(enquiryTypes[0]);
   const [childName, setChildName] = useState("");
-  const [dob, setDob] = useState("");
+  const [dob, setDob] = useState<Date | null>(null);
   const [preferredRoom, setPreferredRoom] = useState<string>(attendanceRooms[0]);
-  const [preferredStart, setPreferredStart] = useState("");
+  const [preferredStart, setPreferredStart] = useState<Date | null>(null);
   const [availabilityRoom, setAvailabilityRoom] = useState<string>(attendanceRooms[0]);
-  const [dateOfInterest, setDateOfInterest] = useState("");
+  const [dateOfInterest, setDateOfInterest] = useState<Date | null>(null);
   const [invoiceReference, setInvoiceReference] = useState("");
   const [description, setDescription] = useState("");
-  const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [priority, setPriority] = useState<EnquiryPriority>("Normal");
   const [contactPreference, setContactPreference] = useState<ContactPreference>("Email");
+  const [contactDetail, setContactDetail] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FieldErrors>({});
+
+  const isEnrolment = type === "New enrolment / waitlist";
+
+  function clearError(field: keyof FieldErrors) {
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
+  }
 
   function resetForm() {
     setType(enquiryTypes[0]);
     setChildName("");
-    setDob("");
+    setDob(null);
     setPreferredRoom(attendanceRooms[0]);
-    setPreferredStart("");
+    setPreferredStart(null);
     setAvailabilityRoom(attendanceRooms[0]);
-    setDateOfInterest("");
+    setDateOfInterest(null);
     setInvoiceReference("");
     setDescription("");
-    setDescriptionError(null);
     setPriority("Normal");
     setContactPreference("Email");
+    setContactDetail("");
     setFileName(null);
+    setErrors({});
+  }
+
+  function validate() {
+    const next: FieldErrors = {};
+    if (!description.trim()) next.description = "Please describe your enquiry.";
+    if (isEnrolment) {
+      if (!childName.trim()) next.childName = "Enter your child's full name.";
+      if (!dob) next.dob = "Select your child's date of birth.";
+      if (!preferredStart) next.preferredStart = "Select a preferred start date.";
+    }
+    if (contactPreference === "Email" && !isValidEmail(contactDetail)) {
+      next.contactDetail = contactDetail.trim()
+        ? "Enter a valid email address, e.g. name@example.com."
+        : "Enter the email address we should reply to.";
+    }
+    if (contactPreference === "Phone" && !isValidPhone(contactDetail)) {
+      next.contactDetail = contactDetail.trim()
+        ? "Enter a valid Australian phone number, e.g. 0412 345 678."
+        : "Enter the phone number we should call.";
+    }
+    setErrors(next);
+    return Object.values(next).every((value) => !value);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!description.trim()) {
-      setDescriptionError("Please describe your enquiry.");
-      return;
-    }
-    setDescriptionError(null);
+    if (!validate()) return;
 
     const messageParts: string[] = [];
-    if (type === "New enrolment / waitlist") {
-      if (dob) messageParts.push(`Date of birth: ${dob}`);
-      if (preferredStart) messageParts.push(`Preferred start date: ${preferredStart}`);
+    if (isEnrolment) {
+      if (dob) messageParts.push(`Date of birth: ${formatShort(dob)}`);
+      if (preferredStart) messageParts.push(`Preferred start date: ${formatShort(preferredStart)}`);
     }
     if (type === "Room availability & places per room") {
       messageParts.push(`Room of interest: ${availabilityRoom}`);
-      if (dateOfInterest) messageParts.push(`Date of interest: ${dateOfInterest}`);
+      if (dateOfInterest) messageParts.push(`Date of interest: ${formatShort(dateOfInterest)}`);
     }
     if (type === "Fees & payments" && invoiceReference.trim()) {
       messageParts.push(`Invoice reference: ${invoiceReference.trim()}`);
@@ -260,16 +307,16 @@ function EnquiryForm({ onSubmitted }: EnquiryFormProps) {
     const created = addEnquiry({
       type,
       family: CURRENT_FAMILY,
-      childName: type === "New enrolment / waitlist" ? childName.trim() || undefined : undefined,
-      room:
-        type === "New enrolment / waitlist"
-          ? preferredRoom
-          : type === "Room availability & places per room"
-            ? availabilityRoom
-            : undefined,
+      childName: isEnrolment ? childName.trim() || undefined : undefined,
+      room: isEnrolment
+        ? preferredRoom
+        : type === "Room availability & places per room"
+          ? availabilityRoom
+          : undefined,
       message: messageParts.join("\n"),
       priority,
       contactPreference,
+      contactDetail: contactPreference === "Portal" ? undefined : contactDetail.trim(),
     });
 
     resetForm();
@@ -277,7 +324,7 @@ function EnquiryForm({ onSubmitted }: EnquiryFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <FormField label="Enquiry type">
         <Select value={type} onChange={(e) => setType(e.target.value as EnquiryType)}>
           {enquiryTypes.map((option) => (
@@ -288,22 +335,31 @@ function EnquiryForm({ onSubmitted }: EnquiryFormProps) {
         </Select>
       </FormField>
 
-      {type === "New enrolment / waitlist" && (
+      {isEnrolment && (
         <>
-          <FormField label="Child name">
+          <FormField label="Child name" htmlFor="child-name" error={errors.childName}>
             <Input
+              id="child-name"
               placeholder="Full name"
-              required
               value={childName}
-              onChange={(e) => setChildName(e.target.value)}
+              onChange={(e) => {
+                setChildName(e.target.value);
+                clearError("childName");
+              }}
+              className={cn(errors.childName && "border-danger-foreground/60")}
             />
           </FormField>
-          <FormField label="Date of birth">
-            <Input
-              placeholder="dd/mm/yyyy"
-              required
+          <FormField label="Date of birth" error={errors.dob}>
+            <DatePicker
               value={dob}
-              onChange={(e) => setDob(e.target.value)}
+              onChange={(date) => {
+                setDob(date);
+                clearError("dob");
+              }}
+              maxDate={today ?? undefined}
+              minDate={today ? addDays(today, -7 * 365) : undefined}
+              placeholder="Select date of birth"
+              invalid={Boolean(errors.dob)}
             />
           </FormField>
           <FormField label="Preferred room">
@@ -313,12 +369,18 @@ function EnquiryForm({ onSubmitted }: EnquiryFormProps) {
               ))}
             </Select>
           </FormField>
-          <FormField label="Preferred start date">
-            <Input
-              placeholder="dd/mm/yyyy"
-              required
+          <FormField label="Preferred start date" error={errors.preferredStart}>
+            <DatePicker
               value={preferredStart}
-              onChange={(e) => setPreferredStart(e.target.value)}
+              onChange={(date) => {
+                setPreferredStart(date);
+                clearError("preferredStart");
+              }}
+              minDate={today ?? undefined}
+              maxDate={today ? addDays(today, 540) : undefined}
+              disableWeekends
+              placeholder="Select a start date"
+              invalid={Boolean(errors.preferredStart)}
             />
           </FormField>
         </>
@@ -334,10 +396,13 @@ function EnquiryForm({ onSubmitted }: EnquiryFormProps) {
             </Select>
           </FormField>
           <FormField label="Date of interest">
-            <Input
-              placeholder="dd/mm/yyyy"
+            <DatePicker
               value={dateOfInterest}
-              onChange={(e) => setDateOfInterest(e.target.value)}
+              onChange={setDateOfInterest}
+              minDate={today ?? undefined}
+              maxDate={today ? addDays(today, 365) : undefined}
+              disableWeekends
+              placeholder="Select a date"
             />
           </FormField>
         </>
@@ -346,36 +411,28 @@ function EnquiryForm({ onSubmitted }: EnquiryFormProps) {
       {type === "Fees & payments" && (
         <FormField label="Invoice reference (optional)">
           <Input
-            placeholder="e.g. 1–7 Sep 2026"
+            placeholder="e.g. INV-260901-176"
             value={invoiceReference}
             onChange={(e) => setInvoiceReference(e.target.value)}
           />
         </FormField>
       )}
 
-      <FormField label="Describe your enquiry">
+      <FormField label="Describe your enquiry" error={errors.description}>
         <Textarea
           placeholder="Tell us a bit more..."
-          required
           rows={4}
           maxLength={MESSAGE_LIMIT}
           value={description}
           onChange={(e) => {
             setDescription(e.target.value);
-            if (e.target.value.trim()) setDescriptionError(null);
+            if (e.target.value.trim()) clearError("description");
           }}
-          className={cn(descriptionError && "border-danger-foreground/60")}
+          className={cn(errors.description && "border-danger-foreground/60")}
         />
-        <div className="flex items-center justify-between">
-          {descriptionError ? (
-            <p className="text-xs text-danger-foreground">{descriptionError}</p>
-          ) : (
-            <span />
-          )}
-          <p className="text-xs text-muted-foreground">
-            {description.length}/{MESSAGE_LIMIT}
-          </p>
-        </div>
+        <p className="text-right text-xs text-muted-foreground">
+          {description.length}/{MESSAGE_LIMIT}
+        </p>
       </FormField>
 
       <FormField label="Priority">
@@ -391,13 +448,43 @@ function EnquiryForm({ onSubmitted }: EnquiryFormProps) {
       <FormField label="Preferred contact">
         <Select
           value={contactPreference}
-          onChange={(e) => setContactPreference(e.target.value as ContactPreference)}
+          onChange={(e) => {
+            setContactPreference(e.target.value as ContactPreference);
+            setContactDetail("");
+            clearError("contactDetail");
+          }}
         >
           <option value="Email">Email</option>
           <option value="Phone">Phone</option>
           <option value="Portal">Portal</option>
         </Select>
       </FormField>
+
+      {contactPreference === "Portal" ? (
+        <p className="rounded-xl bg-muted px-4 py-3 text-xs text-muted-foreground">
+          We&apos;ll reply right here in your Family Portal — you&apos;ll see it under My Enquiries.
+        </p>
+      ) : (
+        <FormField
+          label={contactPreference === "Email" ? "Email address" : "Phone number"}
+          htmlFor="contact-detail"
+          error={errors.contactDetail}
+        >
+          <Input
+            id="contact-detail"
+            type={contactPreference === "Email" ? "email" : "tel"}
+            inputMode={contactPreference === "Email" ? "email" : "tel"}
+            autoComplete={contactPreference === "Email" ? "email" : "tel"}
+            placeholder={contactPreference === "Email" ? "name@example.com" : "0412 345 678"}
+            value={contactDetail}
+            onChange={(e) => {
+              setContactDetail(e.target.value);
+              clearError("contactDetail");
+            }}
+            className={cn(errors.contactDetail && "border-danger-foreground/60")}
+          />
+        </FormField>
+      )}
 
       <FormField label="Attach a file (optional)">
         <label className="flex h-12 w-full cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border bg-card px-4 text-sm text-muted-foreground hover:bg-muted">

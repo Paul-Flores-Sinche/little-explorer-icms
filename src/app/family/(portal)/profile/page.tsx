@@ -1,49 +1,73 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ChevronRight, Home, RefreshCcw } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { FakeSuccessBanner } from "@/components/fake-success-banner";
+import { useToast } from "@/components/ui/toast";
+import { useFamilyStore } from "@/components/family/family-store";
 import { MobilePageHeader } from "@/components/family/mobile-page-header";
+import { usePayment } from "@/components/family/payment/payment-context";
 import { useEnquiries } from "@/components/shared/enquiry-store";
-import { currentFamilyUser, familyProfile } from "@/data/mock-data";
-import { cn } from "@/lib/utils";
+import { familyProfile } from "@/data/mock-data";
+import { cn, initialsOf } from "@/lib/utils";
 
 function ProfileRow({
   label,
   value,
-  chevron,
+  href,
   control,
 }: {
   label: string;
   value?: string;
-  chevron?: boolean;
+  href?: string;
   control?: ReactNode;
 }) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-4 py-4">
+  const content = (
+    <>
       <span className="text-sm font-medium text-foreground">{label}</span>
       {control ?? (
         <span className="flex items-center gap-2 text-sm text-muted-foreground">
           {value}
-          {chevron && <ChevronRight className="h-4 w-4" />}
+          {href && <ChevronRight className="h-4 w-4" />}
         </span>
       )}
-    </div>
+    </>
+  );
+
+  const className = "flex items-center justify-between gap-4 px-4 py-4";
+  return href ? (
+    <Link href={href} className={cn(className, "transition-colors hover:bg-muted")}>
+      {content}
+    </Link>
+  ) : (
+    <div className={className}>{content}</div>
   );
 }
 
 export default function ProfilePage() {
-  const [faceId, setFaceId] = useState(familyProfile.faceIdLogin);
-  const [message, setMessage] = useState<string | null>(null);
+  const { profile, updateProfile, resetFamilyDemo } = useFamilyStore();
+  const { resetPayments } = usePayment();
   const { resetDemo } = useEnquiries();
+  const { toast } = useToast();
 
   function handleResetDemo() {
     resetDemo();
-    setMessage("Demo data has been reset.");
+    resetFamilyDemo();
+    resetPayments();
+    toast({ title: "Demo data has been reset", variant: "info" });
+  }
+
+  function handleFaceId(enabled: boolean) {
+    updateProfile({ faceId: enabled });
+    toast({
+      title: enabled ? "Face ID login turned on" : "Face ID login turned off",
+      description: enabled
+        ? "You can now log in with Face ID on this device."
+        : "You'll need your password to log in.",
+    });
   }
 
   return (
@@ -55,30 +79,18 @@ export default function ProfilePage() {
           Profile &amp; Settings
         </h1>
 
-        {message && (
-          <FakeSuccessBanner
-            message={message}
-            onDismiss={() => setMessage(null)}
-            className="mb-6"
-          />
-        )}
-
         <div className="md:flex md:gap-10">
           <div className="mb-8 flex flex-col items-center text-center md:mb-0 md:w-56 md:shrink-0 md:items-start md:text-left">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-success font-heading text-2xl font-bold text-success-foreground">
-              {currentFamilyUser.initials}
+              {initialsOf(profile.name)}
             </div>
-            <p className="mt-4 font-semibold text-foreground">
-              {familyProfile.name}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {familyProfile.email}
-            </p>
+            <p className="mt-4 font-semibold text-foreground">{profile.name}</p>
+            <p className="text-sm break-all text-muted-foreground">{profile.email}</p>
             <Button
               variant="outline"
               size="sm"
               className="mt-4"
-              onClick={() => setMessage("Photo updated.")}
+              onClick={() => toast({ title: "Photo updated", description: "Your new profile photo is saved." })}
             >
               Change Photo
             </Button>
@@ -89,13 +101,13 @@ export default function ProfilePage() {
               <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Account
               </p>
-              <div className="divide-y divide-border rounded-2xl border border-border bg-card">
-                <ProfileRow label="Personal Details" chevron />
+              <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+                <ProfileRow label="Personal Details" href="/family/profile/personal-details" />
                 <ProfileRow
                   label="Linked Children"
                   value={familyProfile.linkedChildren.join(", ")}
+                  href="/family/profile/children"
                 />
-                <ProfileRow label="Payment Methods" chevron />
               </div>
             </section>
 
@@ -103,19 +115,22 @@ export default function ProfilePage() {
               <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Preferences
               </p>
-              <div className="divide-y divide-border rounded-2xl border border-border bg-card">
-                <ProfileRow label="Notification Preferences" chevron />
+              <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+                <ProfileRow
+                  label="Notification Preferences"
+                  href="/family/profile/notification-preferences"
+                />
                 <ProfileRow
                   label="Face ID Login"
                   control={
                     <Switch
-                      checked={faceId}
-                      onCheckedChange={setFaceId}
+                      checked={profile.faceId}
+                      onCheckedChange={handleFaceId}
                       aria-label="Face ID Login"
                     />
                   }
                 />
-                <ProfileRow label="Change Password" chevron />
+                <ProfileRow label="Change Password" href="/family/profile/change-password" />
               </div>
             </section>
 
@@ -123,9 +138,9 @@ export default function ProfilePage() {
               <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Support
               </p>
-              <div className="divide-y divide-border rounded-2xl border border-border bg-card">
-                <ProfileRow label="Give Feedback" chevron />
-                <ProfileRow label="Help Centre" chevron />
+              <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+                <ProfileRow label="Give Feedback" href="/family/profile/feedback" />
+                <ProfileRow label="Help Centre" href="/family/profile/help" />
               </div>
             </section>
 

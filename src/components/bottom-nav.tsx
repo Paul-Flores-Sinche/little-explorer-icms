@@ -23,7 +23,8 @@ export function BottomNav({ items }: BottomNavProps) {
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card md:hidden">
       <ul className="flex items-stretch justify-between">
         {items.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+          const isRoot = items[0]?.href === href;
+          const active = isRoot ? pathname === href : pathname.startsWith(href);
           return (
             <li key={href} className="flex-1">
               <Link

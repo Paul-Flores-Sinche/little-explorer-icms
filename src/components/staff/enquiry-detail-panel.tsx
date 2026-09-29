@@ -126,6 +126,14 @@ function EnquiryDetailPanelContent({ enquiry }: { enquiry: Enquiry }) {
         )}
         <dt className="text-muted-foreground">Contact preference</dt>
         <dd className="text-right font-medium text-foreground">{enquiry.contactPreference}</dd>
+        {enquiry.contactDetail && (
+          <>
+            <dt className="text-muted-foreground">
+              {enquiry.contactPreference === "Phone" ? "Phone" : "Email"}
+            </dt>
+            <dd className="text-right font-medium break-all text-foreground">{enquiry.contactDetail}</dd>
+          </>
+        )}
         <dt className="text-muted-foreground">Submitted</dt>
         <dd className="text-right font-medium text-foreground">{enquiry.date}</dd>
       </dl>

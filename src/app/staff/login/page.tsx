@@ -3,6 +3,7 @@ import { ArrowLeft, ShieldCheck } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ForgotPassword } from "@/components/shared/forgot-password";
 import { currentStaffUser } from "@/data/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -78,9 +79,11 @@ export default function StaffLoginPage() {
               </label>
               <Input id="password" type="password" defaultValue="password123" />
               <div className="flex justify-end pt-1">
-                <span className="cursor-default text-sm font-semibold text-primary">
-                  Forgot your password?
-                </span>
+                <ForgotPassword
+                  portal="staff"
+                  defaultEmail={currentStaffUser.email}
+                  phoneHint="0402 331 904"
+                />
               </div>
             </div>
 

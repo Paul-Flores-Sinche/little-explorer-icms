@@ -5,6 +5,8 @@ import { Apple, CreditCard, Loader2, ShieldCheck, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
+import type { PaymentResult } from "./payment-context";
+
 import { CardBrandBadge } from "./card-brand-badge";
 import { CardForm, type CardFormErrors, type CardFormValues } from "./card-form";
 import { PaymentMethodOption } from "./payment-method-option";
@@ -29,6 +31,12 @@ const EMPTY_CARD: CardFormValues = {
   saveCard: false,
 };
 
+const BRAND_NAME: Partial<Record<string, string>> = {
+  visa: "Visa",
+  mastercard: "Mastercard",
+  amex: "Amex",
+};
+
 const METHOD_LABEL: Record<Method, string> = {
   paypal: "PayPal",
   card: "Credit / Debit Card",
@@ -39,7 +47,7 @@ interface PaymentSheetProps {
   open: boolean;
   amount: number;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (result: PaymentResult) => void;
 }
 
 export function PaymentSheet({ open, amount, onClose, onSuccess }: PaymentSheetProps) {
@@ -58,6 +66,8 @@ export function PaymentSheet({ open, amount, onClose, onSuccess }: PaymentSheetP
     };
   }, [open]);
 
+  const brand = detectCardBrand(card.number);
+
   function reset() {
     setStep("select");
     setMethod(null);
@@ -73,13 +83,22 @@ export function PaymentSheet({ open, amount, onClose, onSuccess }: PaymentSheetP
     onClose();
   }
 
+  function methodDescription(paidMethod: Method) {
+    if (paidMethod !== "card") return METHOD_LABEL[paidMethod];
+    const digits = card.number.replace(/\D/g, "");
+    const brandLabel = brand ? BRAND_NAME[brand] ?? "Card" : "Card";
+    return `${brandLabel} •••• ${digits.slice(-4)}`;
+  }
+
   function startProcessing(paidMethod: Method) {
+    const methodLabel = methodDescription(paidMethod);
     setPaidWith(paidMethod);
     setStep("processing");
     window.setTimeout(() => {
-      setReceiptNumber(generateReceiptNumber());
+      const receipt = generateReceiptNumber();
+      setReceiptNumber(receipt);
       setStep("success");
-      onSuccess();
+      onSuccess({ amount, methodLabel, receiptNumber: receipt });
     }, 1500);
   }
 
@@ -110,8 +129,6 @@ export function PaymentSheet({ open, amount, onClose, onSuccess }: PaymentSheetP
   }
 
   if (!open) return null;
-
-  const brand = detectCardBrand(card.number);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-4">

@@ -96,30 +96,35 @@ export const learningPortfolio: LearningObservation[] = [
 ];
 
 export interface Invoice {
+  number: string;
   period: string;
+  issued: string;
+  due: string;
   grossFee: number;
   ccsSubsidy: number;
   balance: number;
   status: "Due" | "Paid" | "Overdue";
+  paidWith?: string;
 }
 
 export const familyBilling = {
   currentBalance: 184.5,
   dueDate: "15 Sep 2026",
   invoices: [
-    { period: "1–7 Sep 2026", grossFee: 392.0, ccsSubsidy: 207.5, balance: 184.5, status: "Due" },
-    { period: "25–31 Aug 2026", grossFee: 392.0, ccsSubsidy: 216.0, balance: 176.0, status: "Paid" },
-    { period: "18–24 Aug 2026", grossFee: 392.0, ccsSubsidy: 216.0, balance: 176.0, status: "Paid" },
-    { period: "11–17 Aug 2026", grossFee: 392.0, ccsSubsidy: 216.0, balance: 176.0, status: "Paid" },
+    { number: "INV-260901-176", period: "1–7 Sep 2026", issued: "1 Sep 2026", due: "15 Sep 2026", grossFee: 392.0, ccsSubsidy: 207.5, balance: 184.5, status: "Due" },
+    { number: "INV-260825-176", period: "25–31 Aug 2026", issued: "25 Aug 2026", due: "8 Sep 2026", grossFee: 392.0, ccsSubsidy: 216.0, balance: 176.0, status: "Paid", paidWith: "Visa •••• 4242" },
+    { number: "INV-260818-176", period: "18–24 Aug 2026", issued: "18 Aug 2026", due: "1 Sep 2026", grossFee: 392.0, ccsSubsidy: 216.0, balance: 176.0, status: "Paid", paidWith: "Direct debit" },
+    { number: "INV-260811-176", period: "11–17 Aug 2026", issued: "11 Aug 2026", due: "25 Aug 2026", grossFee: 392.0, ccsSubsidy: 216.0, balance: 176.0, status: "Paid", paidWith: "Direct debit" },
   ] satisfies Invoice[],
 };
 
 export interface FamilyNotification {
+  id: string;
   title: string;
   body: string;
   time: string;
   unread?: boolean;
-  icon: "invoice" | "portfolio" | "notice" | "alert";
+  icon: "invoice" | "portfolio" | "notice" | "alert" | "payment";
   link?: string;
 }
 
@@ -128,6 +133,7 @@ export const familyNotifications: { group: string; items: FamilyNotification[] }
     group: "Today",
     items: [
       {
+        id: "seed-1",
         icon: "invoice",
         title: "Invoice due reminder",
         body: "Your balance of $184.50 is due on 15 Sep. Pay securely from the Billing tab.",
@@ -136,6 +142,7 @@ export const familyNotifications: { group: string; items: FamilyNotification[] }
         link: "/family/billing",
       },
       {
+        id: "seed-2",
         icon: "portfolio",
         title: "Ava's portfolio was updated",
         body: 'Ms. Lee added a new observation: "Sensory play".',
@@ -148,12 +155,14 @@ export const familyNotifications: { group: string; items: FamilyNotification[] }
     group: "Yesterday",
     items: [
       {
+        id: "seed-3",
         icon: "notice",
         title: "Kindergarten excursion notice",
         body: "A permission form for the Botanic Gardens excursion is now available.",
         time: "3:20pm",
       },
       {
+        id: "seed-4",
         icon: "alert",
         title: "Centre closed — public holiday",
         body: "Little Explorer will be closed on Mon 5 Oct. Normal fees apply.",
@@ -166,13 +175,116 @@ export const familyNotifications: { group: string; items: FamilyNotification[] }
 export const familyProfile = {
   name: "Sarah Thompson",
   email: "sarah.thompson@email.com",
+  phone: "0412 345 678",
+  address: "14 Casuarina Drive, Nightcliff NT 0810",
   linkedChildren: ["Ava", "Leo"],
   faceIdLogin: true,
 };
 
-export const hasUnreadNotifications = familyNotifications.some((group) =>
-  group.items.some((item) => item.unread),
-);
+export type NotificationChannel = "email" | "sms" | "push";
+
+export const notificationCategories = [
+  { id: "invoices", label: "Invoices & payments", description: "New invoices, due reminders and receipts" },
+  { id: "attendance", label: "Attendance", description: "Check-in / check-out and absence confirmations" },
+  { id: "portfolio", label: "Learning portfolio", description: "New observations, photos and learning stories" },
+  { id: "notices", label: "Centre notices", description: "Newsletters, excursions and closures" },
+  { id: "enquiries", label: "Enquiries & waitlist", description: "Replies from the centre and waitlist changes" },
+  { id: "health", label: "Health & incidents", description: "Incident reports, medication and illness alerts" },
+] as const;
+
+export type NotificationCategoryId = (typeof notificationCategories)[number]["id"];
+
+export const defaultNotificationPreferences: Record<NotificationCategoryId, NotificationChannel[]> = {
+  invoices: ["email", "push"],
+  attendance: ["push"],
+  portfolio: ["push"],
+  notices: ["email", "push"],
+  enquiries: ["email", "push"],
+  health: ["email", "sms", "push"],
+};
+
+export const helpCentreFaqs: { category: string; items: { question: string; answer: string }[] }[] = [
+  {
+    category: "Attendance",
+    items: [
+      {
+        question: "How do I let the centre know my child will be absent?",
+        answer:
+          "Send an 'Attendance & absences' enquiry from the Enquiries screen or call the centre on (08) 8981 4420 before 9:00am. Absences are recorded against your child's attendance so CCS can still be claimed (up to 42 absence days per financial year).",
+      },
+      {
+        question: "What are the drop-off and pick-up times?",
+        answer:
+          "Little Explorer is open Monday to Friday, 7:00am – 6:00pm. We recommend arriving before 9:00am so your child doesn't miss morning group time. A late fee applies after 6:00pm.",
+      },
+      {
+        question: "Who can collect my child?",
+        answer:
+          "Only authorised nominees listed on your enrolment form. If someone new is collecting, add them via the front desk in advance — photo ID is checked at pick-up.",
+      },
+    ],
+  },
+  {
+    category: "Fees & CCS",
+    items: [
+      {
+        question: "How is the Child Care Subsidy (CCS) applied?",
+        answer:
+          "Services Australia pays CCS directly to the centre and we deduct it from your weekly invoice. You only pay the gap fee shown as your balance. Your CCS percentage depends on your family income and activity test.",
+      },
+      {
+        question: "When are invoices issued and due?",
+        answer:
+          "Invoices are issued every Monday for the week ahead and are due 14 days later. You can pay by card, PayPal or Apple Pay in the Billing tab, or set up direct debit.",
+      },
+      {
+        question: "My CCS percentage looks wrong — what should I do?",
+        answer:
+          "Check your details in myGov (Centrelink). Once Services Australia updates your assessment, the new percentage flows through to your next invoice automatically.",
+      },
+    ],
+  },
+  {
+    category: "Learning portfolio",
+    items: [
+      {
+        question: "How often is my child's portfolio updated?",
+        answer:
+          "Educators post observations throughout the day, usually two per day of attendance, linked to the Early Years Learning Framework (EYLF) outcomes.",
+      },
+      {
+        question: "Can I respond to an observation?",
+        answer:
+          "Yes — tap the heart to let educators know you loved it. Share ideas from home through an enquiry and we'll build them into the program.",
+      },
+    ],
+  },
+  {
+    category: "Health & safety",
+    items: [
+      {
+        question: "How do I update emergency contacts or medical information?",
+        answer:
+          "Update your details under Profile → Personal Details and send an enquiry for medical plans (asthma, anaphylaxis). The room leader will review the plan with you.",
+      },
+      {
+        question: "What happens if my child is unwell at the centre?",
+        answer:
+          "We'll call you to arrange pick-up within the hour. Children need to be symptom-free for 24 hours (48 hours for gastro) before returning.",
+      },
+    ],
+  },
+  {
+    category: "Contact",
+    items: [
+      {
+        question: "How can I contact the centre?",
+        answer:
+          "Call (08) 8981 4420, email hello@littleexplorer.edu.au or send an enquiry in the portal. The front desk is staffed 7:00am – 6:00pm on weekdays.",
+      },
+    ],
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Shared — Enquiries (Family <-> Staff, backed by a localStorage-persisted
@@ -214,6 +326,8 @@ export interface Enquiry {
   message: string;
   priority: EnquiryPriority;
   contactPreference: ContactPreference;
+  /** Email address or phone number matching the contact preference. */
+  contactDetail?: string;
   status: EnquiryStatus;
   date: string;
   internalNotes: string;

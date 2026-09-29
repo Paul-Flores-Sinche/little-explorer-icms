@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, ShieldCheck } from "lucide-react";
 
+import { useFamilyStore } from "@/components/family/family-store";
 import { useEnquiries } from "@/components/shared/enquiry-store";
-import { cn } from "@/lib/utils";
-import { currentFamilyUser, hasUnreadNotifications } from "@/data/mock-data";
+import { cn, initialsOf } from "@/lib/utils";
 
 const CURRENT_FAMILY = "Thompson";
 
@@ -20,6 +20,7 @@ const links = [
 export function FamilyTopNav() {
   const pathname = usePathname();
   const { enquiries } = useEnquiries();
+  const { hasUnread: hasUnreadNotifications, profile } = useFamilyStore();
   const hasUnreadEnquiries = enquiries.some(
     (enquiry) => enquiry.family === CURRENT_FAMILY && enquiry.familyUnread,
   );
@@ -36,7 +37,8 @@ export function FamilyTopNav() {
         </Link>
         <nav className="flex items-center gap-7">
           {links.map((link) => {
-            const active = pathname === link.href;
+            const active =
+              link.href === "/family" ? pathname === link.href : pathname.startsWith(link.href);
             return (
               <Link
                 key={link.href}
@@ -66,10 +68,10 @@ export function FamilyTopNav() {
         </Link>
         <Link href="/family/profile" className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-success text-xs font-bold text-success-foreground">
-            {currentFamilyUser.initials}
+            {initialsOf(profile.name)}
           </span>
           <span className="text-sm font-semibold text-foreground">
-            {currentFamilyUser.name}
+            {profile.name}
           </span>
         </Link>
       </div>

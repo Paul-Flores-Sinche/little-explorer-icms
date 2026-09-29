@@ -62,6 +62,7 @@ export interface NewEnquiryInput {
   message: string;
   priority: EnquiryPriority;
   contactPreference: ContactPreference;
+  contactDetail?: string;
 }
 
 interface EnquiryContextValue {
@@ -114,6 +115,7 @@ export function EnquiryProvider({ children }: { children: ReactNode }) {
       message: input.message,
       priority: input.priority,
       contactPreference: input.contactPreference,
+      contactDetail: input.contactDetail,
       status: "New",
       date: dateLabel,
       internalNotes: "",
