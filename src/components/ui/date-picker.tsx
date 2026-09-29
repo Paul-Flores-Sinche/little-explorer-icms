@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { CalendarDays, ChevronDown } from "lucide-react";
 
 import { Calendar } from "@/components/ui/calendar";
@@ -45,7 +45,40 @@ export function DatePicker({
   className,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<CSSProperties>({});
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const today = useToday();
+
+  // Close on scroll/resize: the popover is fixed to the viewport so it can
+  // escape scrolling containers such as dialogs.
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [open]);
+
+  function toggle() {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (rect && !open) {
+      const popoverHeight = 430;
+      const popoverWidth = 322;
+      const placeAbove = window.innerHeight - rect.bottom < popoverHeight && rect.top > popoverHeight;
+      const left =
+        align === "right"
+          ? Math.max(8, rect.right - popoverWidth)
+          : Math.min(rect.left, window.innerWidth - popoverWidth - 8);
+      setPosition({
+        left: Math.max(8, left),
+        ...(placeAbove ? { bottom: window.innerHeight - rect.top + 8 } : { top: rect.bottom + 8 }),
+      });
+    }
+    setOpen((prev) => !prev);
+  }
 
   const label = value
     ? mode === "week"
@@ -68,10 +101,11 @@ export function DatePicker({
     <div className={cn("relative", variant === "field" && "w-full", className)}>
       <button
         id={id}
+        ref={triggerRef}
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={toggle}
         className={cn(
           "flex items-center gap-2 text-sm transition-colors",
           variant === "field"
@@ -99,15 +133,13 @@ export function DatePicker({
             type="button"
             aria-label="Close calendar"
             onClick={() => setOpen(false)}
-            className="fixed inset-0 z-40 cursor-default"
+            className="fixed inset-0 z-[60] cursor-default"
           />
           <div
             role="dialog"
             aria-label="Choose date"
-            className={cn(
-              "absolute z-50 mt-2 rounded-2xl border border-border bg-card p-4 shadow-xl",
-              align === "right" ? "right-0" : "left-0",
-            )}
+            style={position}
+            className="fixed z-[61] rounded-2xl border border-border bg-card p-4 shadow-xl"
           >
             <Calendar
               selected={value}

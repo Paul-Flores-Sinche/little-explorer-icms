@@ -519,11 +519,11 @@ function MyChildContent() {
               </p>
             </div>
             <TabsList className="w-full md:w-fit">
-              <TabsTrigger value="attendance" className="flex-1 gap-1.5">
+              <TabsTrigger value="attendance" className="flex-1 gap-1.5 whitespace-nowrap">
                 <CalendarCheck className="h-4 w-4" />
                 Attendance
               </TabsTrigger>
-              <TabsTrigger value="portfolio" className="flex-1 gap-1.5">
+              <TabsTrigger value="portfolio" className="flex-1 gap-1.5 whitespace-nowrap">
                 <Sparkles className="h-4 w-4" />
                 Learning Portfolio
               </TabsTrigger>
