@@ -13,9 +13,20 @@ import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/staff/page-header";
 import { StatTile } from "@/components/stat-tile";
 import { InvoicePreviewDialog } from "@/components/shared/invoice-preview";
-import { getFamilyCharges, isUnpaid, type ChargeStatus, type FamilyCharge } from "@/data/centre";
+import { getFamilyCharges, getMonthlyCharges, isUnpaid, type ChargeStatus, type FamilyCharge } from "@/data/centre";
 import { invoiceFromCharge } from "@/data/invoices";
-import { addDays, diffInDays, formatRange, formatShort, isWeekend, startOfWeek, toKey } from "@/lib/dates";
+import {
+  addDays,
+  daysInMonth,
+  diffInDays,
+  formatMonthYear,
+  formatRange,
+  formatShort,
+  isWeekend,
+  startOfMonth,
+  startOfWeek,
+  toKey,
+} from "@/lib/dates";
 import { downloadCsv } from "@/lib/pdf";
 import { useNow, type Now } from "@/lib/use-now";
 import { cn } from "@/lib/utils";
@@ -29,7 +40,7 @@ function statusVariant(status: ChargeStatus): BadgeProps["variant"] {
   return "warning";
 }
 
-type Mode = "week" | "day";
+type Mode = "week" | "day" | "month";
 type StatusFilter = "All" | "Unpaid" | "Paid" | "Overdue";
 
 function submissionStatus(weekStart: Date, today: Date): { label: string; variant: BadgeProps["variant"]; detail: string } {
@@ -40,6 +51,34 @@ function submissionStatus(weekStart: Date, today: Date): { label: string; varian
     label: "Draft – not yet due",
     variant: "warning",
     detail: `Session reports due ${formatShort(addDays(weekStart, 20))}`,
+  };
+}
+
+type Submission = ReturnType<typeof submissionStatus>;
+
+/** Session reports are lodged per week, so a month rolls up every week so far that overlaps it. */
+function monthSubmissionStatus(monthStart: Date, today: Date): Submission {
+  const monthEnd = addDays(monthStart, daysInMonth(monthStart) - 1);
+  const weeks: Submission[] = [];
+  for (let week = startOfWeek(monthStart); week <= monthEnd && week <= today; week = addDays(week, 7)) {
+    weeks.push(submissionStatus(week, today));
+  }
+  const accepted = weeks.filter((week) => week.variant === "success").length;
+  const processing = weeks.filter((week) => week.variant === "info").length;
+  const drafts = weeks.length - accepted - processing;
+  const detail = [
+    accepted && `${accepted} accepted`,
+    processing && `${processing} processing`,
+    drafts && `${drafts} draft${drafts === 1 ? "" : "s"} not yet due`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  if (accepted === weeks.length) return { label: `All ${weeks.length} weeks accepted`, variant: "success", detail };
+  return {
+    label: `${accepted + processing} of ${weeks.length} weeks submitted`,
+    variant: drafts > 0 ? "warning" : "info",
+    detail,
   };
 }
 
@@ -55,17 +94,24 @@ function CcsContent({ now }: { now: Now }) {
   const [exporting, setExporting] = useState(false);
 
   const weekStart = startOfWeek(anchor);
-  const start = mode === "week" ? weekStart : anchor;
+  const monthStart = startOfMonth(anchor);
+  const start = mode === "week" ? weekStart : mode === "month" ? monthStart : anchor;
   const days = mode === "week" ? 7 : 1;
-  const charges = getFamilyCharges(start, days, now.today);
-  const periodLabel = mode === "week" ? formatRange(weekStart, addDays(weekStart, 6)) : formatShort(anchor);
-  const submission = submissionStatus(weekStart, now.today);
+  const charges = mode === "month" ? getMonthlyCharges(monthStart, now.today) : getFamilyCharges(start, days, now.today);
+  const periodLabel =
+    mode === "week"
+      ? formatRange(weekStart, addDays(weekStart, 6))
+      : mode === "month"
+        ? formatMonthYear(anchor)
+        : formatShort(anchor);
+  const submission =
+    mode === "month" ? monthSubmissionStatus(monthStart, now.today) : submissionStatus(weekStart, now.today);
 
   const totals = charges.reduce(
     (sum, charge) => ({
       gross: sum.gross + charge.grossFee,
       ccs: sum.ccs + charge.ccsSubsidy,
-      outstanding: sum.outstanding + (isUnpaid(charge.status) ? charge.balance : 0),
+      outstanding: sum.outstanding + (isUnpaid(charge.status) ? (charge.outstanding ?? charge.balance) : 0),
     }),
     { gross: 0, ccs: 0, outstanding: 0 },
   );
@@ -97,7 +143,7 @@ function CcsContent({ now }: { now: Now }) {
     setReminded((prev) => [...prev, charge.invoiceNumber]);
     toast({
       title: `Reminder sent to the ${charge.family.surname} family`,
-      description: `${charge.family.guardian} was emailed about $${charge.balance.toFixed(2)} (${charge.invoiceNumber}).`,
+      description: `${charge.family.guardian} was emailed about $${(charge.outstanding ?? charge.balance).toFixed(2)} (${charge.invoiceNumber}).`,
     });
   }
 
@@ -105,7 +151,7 @@ function CcsContent({ now }: { now: Now }) {
     setExporting(true);
     const id = toast({ title: "Preparing CSV export…", description: `${filtered.length} invoices for ${periodLabel}`, variant: "loading" });
     window.setTimeout(() => {
-      downloadCsv(`ccs-invoices-${toKey(start)}${mode === "day" ? "" : "-week"}.csv`, [
+      downloadCsv(`ccs-invoices-${toKey(start)}${mode === "day" ? "" : `-${mode}`}.csv`, [
         ["Invoice", "Family", "Children", "Period", "Sessions", "Gross fee", "CCS subsidy", "Gap fee", "Status", "Paid with"],
         ...filtered.map((charge) => [
           charge.invoiceNumber,
@@ -125,13 +171,18 @@ function CcsContent({ now }: { now: Now }) {
     }, 1100);
   }
 
-  const maxDate = mode === "week" ? addDays(startOfWeek(now.today), 6) : now.today;
+  const maxDate =
+    mode === "week"
+      ? addDays(startOfWeek(now.today), 6)
+      : mode === "month"
+        ? addDays(startOfMonth(now.today), daysInMonth(now.today) - 1)
+        : now.today;
 
   return (
     <>
       <PageHeader title="CCS & Payments" subtitle={`Billing period: ${periodLabel}`}>
         <div className="flex rounded-xl bg-muted p-1">
-          {(["week", "day"] as const).map((option) => (
+          {(["month", "week", "day"] as const).map((option) => (
             <button
               key={option}
               type="button"
@@ -168,7 +219,7 @@ function CcsContent({ now }: { now: Now }) {
 
       <div className="space-y-6 px-8 py-6">
         <div className="grid grid-cols-4 gap-4">
-          <StatTile label={mode === "week" ? "Total invoiced" : "Fees for the day"} value={`$${Math.round(totals.gross).toLocaleString()}`} />
+          <StatTile label={mode === "day" ? "Fees for the day" : "Total invoiced"} value={`$${Math.round(totals.gross).toLocaleString()}`} />
           <StatTile
             label="CCS subsidy applied"
             value={`$${Math.round(totals.ccs).toLocaleString()}`}
@@ -258,7 +309,12 @@ function CcsContent({ now }: { now: Now }) {
                     <td className="py-3 text-xs text-muted-foreground">{charge.invoiceNumber}</td>
                     <td className="py-3 text-foreground">${charge.grossFee.toFixed(2)}</td>
                     <td className="py-3 text-foreground">${charge.ccsSubsidy.toFixed(2)}</td>
-                    <td className="py-3 font-semibold text-foreground">${charge.balance.toFixed(2)}</td>
+                    <td className="py-3">
+                      <p className="font-semibold text-foreground">${charge.balance.toFixed(2)}</p>
+                      {charge.outstanding !== undefined && charge.outstanding > 0 && charge.outstanding !== charge.balance && (
+                        <p className="text-xs text-muted-foreground">${charge.outstanding.toFixed(2)} unpaid</p>
+                      )}
+                    </td>
                     <td className="py-3">
                       <Badge variant={statusVariant(charge.status)}>{charge.status}</Badge>
                     </td>

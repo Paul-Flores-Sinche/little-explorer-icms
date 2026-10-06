@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { AlertTriangle, CalendarX } from "lucide-react";
+import { AlertTriangle, CalendarX, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -40,6 +40,13 @@ const EARLIEST = new Date(2025, 0, 6);
 const STAFF_NAME = `${currentStaffUser.name.split(" ")[0][0]}. ${currentStaffUser.name.split(" ")[1]}`;
 
 type Overrides = Record<string, Partial<AttendanceRecord>>;
+
+/** One day back (-1) or forward (+1), skipping Saturday/Sunday when the centre is closed. */
+function stepWeekday(date: Date, direction: -1 | 1) {
+  let next = addDays(date, direction);
+  while (isWeekend(next)) next = addDays(next, direction);
+  return next;
+}
 
 function AttendanceContent({ now }: { now: Now }) {
   const searchParams = useSearchParams();
@@ -101,6 +108,8 @@ function AttendanceContent({ now }: { now: Now }) {
   }
 
   const lastFriday = addDays(date, 4 - weekdayIndex(date));
+  const previousDay = stepWeekday(date, -1);
+  const nextDay = stepWeekday(date, 1);
 
   return (
     <>
@@ -110,15 +119,39 @@ function AttendanceContent({ now }: { now: Now }) {
             Back to today
           </Button>
         )}
-        <DatePicker
-          variant="chip"
-          value={date}
-          onChange={setDate}
-          maxDate={now.today}
-          minDate={EARLIEST}
-          disableWeekends={!isWeekend(now.today)}
-          align="right"
-        />
+        <div className="flex items-stretch gap-1.5">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-auto w-10"
+            aria-label="Previous day"
+            title={formatLong(previousDay)}
+            disabled={previousDay < EARLIEST}
+            onClick={() => setDate(previousDay)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <DatePicker
+            variant="chip"
+            value={date}
+            onChange={setDate}
+            maxDate={now.today}
+            minDate={EARLIEST}
+            disableWeekends={!isWeekend(now.today)}
+            align="right"
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-auto w-10"
+            aria-label="Next day"
+            title={formatLong(nextDay)}
+            disabled={nextDay > now.today}
+            onClick={() => setDate(nextDay)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </PageHeader>
 
       <div className="space-y-6 px-8 py-6">

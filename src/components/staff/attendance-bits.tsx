@@ -60,18 +60,24 @@ export function WeekPattern({
       {[0, 1, 2, 3, 4].map((offset) => {
         const day = addDays(monday, offset);
         const record = getAttendance(child, day, now);
-        const selected = isSameDay(day, date);
+        const isToday = isSameDay(day, now.today);
+        const isViewedOnly = isSameDay(day, date) && !isToday;
         return (
           <button
             key={offset}
             type="button"
             disabled={!onSelectDay || day > now.today}
             onClick={() => onSelectDay?.(day)}
-            title={`${WEEKDAYS[offset]} ${formatShort(day)} — ${record.status}`}
+            title={`${WEEKDAYS[offset]} ${formatShort(day)}${isToday ? " · Today" : ""} — ${record.status}`}
             className={cn(
               "flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold disabled:cursor-default",
               patternClass(record),
-              selected && "ring-2 ring-primary ring-offset-1",
+              // Today needs a ring color that reads against every status fill, including the
+              // success green most children sit in most days — ring-primary (near-identical
+              // dark green) used to vanish right where staff need it most. Accent coral clears
+              // that contrast problem against every status color.
+              isToday && "ring-2 ring-accent ring-offset-1",
+              isViewedOnly && "ring-2 ring-primary ring-offset-1",
             )}
           >
             {WEEKDAYS_SHORT[offset][0]}
@@ -99,6 +105,10 @@ export function WeekPatternLegend() {
           {item.label}
         </span>
       ))}
+      <span className="flex items-center gap-1.5">
+        <span className="h-3 w-3 rounded-full bg-muted ring-2 ring-accent ring-offset-1" />
+        Today
+      </span>
     </div>
   );
 }

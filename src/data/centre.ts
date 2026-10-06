@@ -671,6 +671,8 @@ export interface FamilyCharge {
   status: ChargeStatus;
   dueDate: string;
   paidWith: string | null;
+  /** Unpaid part of `balance` when the charge rolls up several weekly invoices (month view). */
+  outstanding?: number;
 }
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
@@ -757,6 +759,65 @@ export function getFamilyCharges(start: Date, days: number, today: Date): Family
         dueDate: toKey(addDays(weekStart, 14)),
         paidWith,
       } satisfies FamilyCharge;
+    })
+    .filter((charge): charge is FamilyCharge => charge !== null);
+}
+
+function statusRank(status: ChargeStatus) {
+  if (status.startsWith("Overdue")) return 1000 + Number(status.replace(/\D/g, ""));
+  return status === "Due" ? 1 : 0;
+}
+
+/**
+ * Monthly statement per family: every weekly invoice that overlaps the month,
+ * clipped to the month's days and issued by `today`. Each week keeps its own payment status, so the
+ * roll-up reports the most urgent one and only counts unpaid weeks as outstanding.
+ */
+export function getMonthlyCharges(monthStart: Date, today: Date): FamilyCharge[] {
+  const first = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
+  const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
+  const byFamily = new Map<string, FamilyCharge[]>();
+
+  // Weeks that haven't started yet have no invoice issued, so they're left out.
+  for (let week = startOfWeek(first); week <= last && week <= today; week = addDays(week, 7)) {
+    const sliceStart = week < first ? first : week;
+    const weekEnd = addDays(week, 6);
+    const sliceEnd = weekEnd > last ? last : weekEnd;
+    const days = diffInDays(sliceEnd, sliceStart) + 1;
+    // The weekly levy belongs to the month the week starts in.
+    const levy = week >= first && days < 7 ? WEEKLY_LEVY : 0;
+    for (const charge of getFamilyCharges(sliceStart, days, today)) {
+      const withLevy = levy
+        ? { ...charge, levy, grossFee: round2(charge.grossFee + levy), balance: round2(charge.balance + levy) }
+        : charge;
+      byFamily.set(charge.family.id, [...(byFamily.get(charge.family.id) ?? []), withLevy]);
+    }
+  }
+
+  return familyAccounts
+    .map((family, familyIndex): FamilyCharge | null => {
+      const weeks = byFamily.get(family.id);
+      if (!weeks) return null;
+      const status = weeks.reduce<ChargeStatus>(
+        (worst, week) => (statusRank(week.status) > statusRank(worst) ? week.status : worst),
+        "Paid",
+      );
+      const sum = (pick: (week: FamilyCharge) => number) => round2(weeks.reduce((total, week) => total + pick(week), 0));
+      return {
+        family,
+        invoiceNumber: `STM-${toKey(first).replaceAll("-", "").slice(2, 6)}-${String(familyIndex + 101).padStart(3, "0")}`,
+        periodStart: toKey(first),
+        periodEnd: toKey(last),
+        lines: weeks.flatMap((week) => week.lines),
+        levy: sum((week) => week.levy),
+        grossFee: sum((week) => week.grossFee),
+        ccsSubsidy: sum((week) => week.ccsSubsidy),
+        balance: sum((week) => week.balance),
+        outstanding: sum((week) => (isUnpaid(week.status) ? week.balance : 0)),
+        status,
+        dueDate: weeks[weeks.length - 1].dueDate,
+        paidWith: status === "Paid" ? weeks[weeks.length - 1].paidWith : null,
+      };
     })
     .filter((charge): charge is FamilyCharge => charge !== null);
 }

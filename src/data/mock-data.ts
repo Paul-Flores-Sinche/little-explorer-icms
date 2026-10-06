@@ -501,6 +501,27 @@ export const currentStaffUser = {
   email: "m.reyes@littleexplorer.edu.au",
 };
 
+/** Id of the signed-in staff member in `staffMembers` (src/data/centre.ts). */
+export const currentStaffId = "reyes";
+
+export const staffNotificationCategories = [
+  { id: "enquiries", label: "New enquiries", description: "Enrolment enquiries and waitlist requests from families" },
+  { id: "compliance", label: "Compliance expiries", description: "Staff certifications and documents due for renewal" },
+  { id: "roster", label: "Roster changes", description: "Shift swaps, leave requests and cover needed" },
+  { id: "payments", label: "Overdue family accounts", description: "Gap fees that pass their due date" },
+  { id: "incidents", label: "Incident reports", description: "New incident, injury, trauma and illness records" },
+] as const;
+
+export type StaffNotificationCategoryId = (typeof staffNotificationCategories)[number]["id"];
+
+export const defaultStaffNotificationPreferences: Record<StaffNotificationCategoryId, NotificationChannel[]> = {
+  enquiries: ["email", "push"],
+  compliance: ["email", "push"],
+  roster: ["email", "sms", "push"],
+  payments: ["email"],
+  incidents: ["email", "push"],
+};
+
 export const staffDashboardDate = "Wed, 19 August 2026";
 export const staffAttendanceDate = "19 Aug 2026";
 

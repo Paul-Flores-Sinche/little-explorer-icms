@@ -13,7 +13,9 @@ import {
 
 import { Sidebar, type SidebarNavItem } from "@/components/sidebar";
 import { useEnquiries } from "@/components/shared/enquiry-store";
+import { StaffProfileProvider, useStaffProfile } from "@/components/staff/staff-profile-store";
 import { currentStaffUser } from "@/data/mock-data";
+import { initialsOf } from "@/lib/utils";
 
 const navItems: SidebarNavItem[] = [
   { href: "/staff", label: "Dashboard", icon: LayoutDashboard },
@@ -29,25 +31,38 @@ const navItems: SidebarNavItem[] = [
 ];
 
 const footerItems: SidebarNavItem[] = [
-  { href: "#", label: "Settings", icon: Settings },
+  { href: "/staff/profile", label: "Settings", icon: Settings, matchPrefix: true },
 ];
 
-export default function StaffPortalLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+function StaffPortalShell({ children }: { children: ReactNode }) {
   const { resetDemo } = useEnquiries();
+  const { profile, resetStaffProfile } = useStaffProfile();
 
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar
         items={navItems}
         footerItems={footerItems}
-        onResetDemo={resetDemo}
-        user={currentStaffUser}
+        onResetDemo={() => {
+          resetDemo();
+          resetStaffProfile();
+        }}
+        user={{ ...currentStaffUser, name: profile.name, initials: initialsOf(profile.name) }}
+        userHref="/staff/profile"
       />
       <main className="flex-1">{children}</main>
     </div>
+  );
+}
+
+export default function StaffPortalLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <StaffProfileProvider>
+      <StaffPortalShell>{children}</StaffPortalShell>
+    </StaffProfileProvider>
   );
 }

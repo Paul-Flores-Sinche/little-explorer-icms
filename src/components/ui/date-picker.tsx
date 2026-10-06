@@ -4,7 +4,15 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { CalendarDays, ChevronDown } from "lucide-react";
 
 import { Calendar } from "@/components/ui/calendar";
-import { addDays, formatRange, formatShort, isWeekend, startOfWeek } from "@/lib/dates";
+import {
+  addDays,
+  formatMonthYear,
+  formatRange,
+  formatShort,
+  isWeekend,
+  startOfMonth,
+  startOfWeek,
+} from "@/lib/dates";
 import { useToday } from "@/lib/use-now";
 import { cn } from "@/lib/utils";
 
@@ -14,8 +22,8 @@ interface DatePickerProps {
   minDate?: Date;
   maxDate?: Date;
   disableWeekends?: boolean;
-  /** "week" selects the Monday of the clicked week. */
-  mode?: "day" | "week";
+  /** "week" selects the Monday of the clicked week, "month" the 1st of the clicked month. */
+  mode?: "day" | "week" | "month";
   /** Number of days shown in week labels (5 = Mon–Fri, 7 = Mon–Sun). */
   weekLength?: number;
   /** "field" looks like a form input, "chip" like the header pills. */
@@ -83,7 +91,9 @@ export function DatePicker({
   const label = value
     ? mode === "week"
       ? formatRange(startOfWeek(value), addDays(startOfWeek(value), weekLength - 1))
-      : formatShort(value)
+      : mode === "month"
+        ? formatMonthYear(value)
+        : formatShort(value)
     : placeholder;
 
   const todayAllowed =
@@ -93,7 +103,7 @@ export function DatePicker({
     !(disableWeekends && isWeekend(today));
 
   function handleSelect(date: Date) {
-    onChange(mode === "week" ? startOfWeek(date) : date);
+    onChange(mode === "week" ? startOfWeek(date) : mode === "month" ? startOfMonth(date) : date);
     setOpen(false);
   }
 
@@ -152,7 +162,13 @@ export function DatePicker({
             />
             <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs">
               <span className="text-muted-foreground">
-                {disableWeekends ? "Centre open Mon–Fri" : mode === "week" ? "Pick any day in a week" : ""}
+                {disableWeekends
+                  ? "Centre open Mon–Fri"
+                  : mode === "week"
+                    ? "Pick any day in a week"
+                    : mode === "month"
+                      ? "Pick any day in a month"
+                      : ""}
               </span>
               {todayAllowed && (
                 <button
@@ -160,7 +176,7 @@ export function DatePicker({
                   onClick={() => handleSelect(today)}
                   className="font-semibold text-primary hover:underline"
                 >
-                  {mode === "week" ? "This week" : "Today"}
+                  {mode === "week" ? "This week" : mode === "month" ? "This month" : "Today"}
                 </button>
               )}
             </div>

@@ -10,6 +10,8 @@ export interface SidebarNavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Also mark the link active on nested routes (e.g. /staff/profile/...). */
+  matchPrefix?: boolean;
 }
 
 interface SidebarUser {
@@ -23,11 +25,13 @@ interface SidebarProps {
   footerItems?: SidebarNavItem[];
   onResetDemo?: () => void;
   user: SidebarUser;
+  /** Makes the user block a link (e.g. to the profile page). */
+  userHref?: string;
 }
 
-function SidebarLink({ href, label, icon: Icon }: SidebarNavItem) {
+function SidebarLink({ href, label, icon: Icon, matchPrefix }: SidebarNavItem) {
   const pathname = usePathname();
-  const active = pathname === href;
+  const active = pathname === href || (matchPrefix && pathname.startsWith(`${href}/`));
 
   return (
     <Link
@@ -43,7 +47,21 @@ function SidebarLink({ href, label, icon: Icon }: SidebarNavItem) {
   );
 }
 
-export function Sidebar({ items, footerItems, onResetDemo, user }: SidebarProps) {
+export function Sidebar({ items, footerItems, onResetDemo, user, userHref }: SidebarProps) {
+  const userBlock = (
+    <>
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-sm font-semibold">
+        {user.initials}
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">{user.name}</p>
+        <p className="truncate text-xs text-primary-foreground/70">
+          {user.role}
+        </p>
+      </div>
+    </>
+  );
+
   return (
     <aside className="hidden w-72 shrink-0 flex-col bg-primary px-4 py-6 text-primary-foreground md:flex">
       <div className="flex items-center gap-2 px-2 pb-8">
@@ -71,16 +89,18 @@ export function Sidebar({ items, footerItems, onResetDemo, user }: SidebarProps)
         </ul>
       )}
 
-      <div className="flex items-center gap-3 border-t border-white/10 pt-4 mt-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-sm font-semibold">
-          {user.initials}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{user.name}</p>
-          <p className="truncate text-xs text-primary-foreground/70">
-            {user.role}
-          </p>
-        </div>
+      <div className="mt-4 border-t border-white/10 pt-4">
+        {userHref ? (
+          <Link
+            href={userHref}
+            title="View your profile"
+            className="-mx-1 flex items-center gap-3 rounded-xl px-1 py-1 transition-colors hover:bg-white/10"
+          >
+            {userBlock}
+          </Link>
+        ) : (
+          <div className="flex items-center gap-3">{userBlock}</div>
+        )}
       </div>
 
       <div className="mt-3 flex items-center justify-between px-2">

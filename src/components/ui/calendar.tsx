@@ -11,6 +11,7 @@ import {
   isSameDay,
   isWeekend,
   startOfDay,
+  startOfMonth,
   startOfWeek,
 } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -21,8 +22,8 @@ export interface CalendarProps {
   minDate?: Date;
   maxDate?: Date;
   disableWeekends?: boolean;
-  /** "week" highlights the whole Monday–Sunday week of the selection. */
-  selectionMode?: "day" | "week";
+  /** "week" highlights the whole Monday–Sunday week of the selection, "month" the whole month. */
+  selectionMode?: "day" | "week" | "month";
   today?: Date | null;
 }
 
@@ -125,7 +126,9 @@ export function Calendar({
           const isSelected =
             selectionMode === "day"
               ? selected && isSameDay(day, selected)
-              : selectedWeek && isSameDay(startOfWeek(day), selectedWeek);
+              : selectionMode === "week"
+                ? selectedWeek && isSameDay(startOfWeek(day), selectedWeek)
+                : selected && !outside && isSameDay(startOfMonth(day), startOfMonth(selected));
           const isToday = today && isSameDay(day, today);
 
           return (
@@ -141,7 +144,7 @@ export function Calendar({
                 disabled && "cursor-not-allowed text-muted-foreground/30 line-through",
                 isToday && !isSelected && "font-bold text-primary ring-1 ring-primary/40",
                 isSelected && "bg-primary font-semibold text-primary-foreground",
-                selectionMode === "week" && isSelected && "w-full rounded-none",
+                selectionMode !== "day" && isSelected && "w-full rounded-none",
               )}
             >
               {day.getDate()}

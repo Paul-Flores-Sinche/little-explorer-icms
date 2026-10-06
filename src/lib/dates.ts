@@ -41,6 +41,15 @@ export function startOfWeek(date: Date) {
   return addDays(startOfDay(date), -weekdayIndex(date));
 }
 
+/** First day of the month containing `date`. */
+export function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+export function daysInMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+}
+
 export function isSameDay(a: Date, b: Date) {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -102,6 +111,11 @@ export function formatRange(start: Date, end: Date) {
     return `${formatDayMonth(start)} – ${formatDayMonth(end)} ${end.getFullYear()}`;
   }
   return `${formatShort(start)} – ${formatShort(end)}`;
+}
+
+/** "October 2026" */
+export function formatMonthYear(date: Date) {
+  return `${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 /** Minutes since midnight -> "8:02am" */

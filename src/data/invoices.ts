@@ -30,8 +30,8 @@ export function invoiceFromCharge(charge: FamilyCharge): InvoiceDocument {
     lines.push({
       description: "Centre levy (weekly)",
       detail: "Consumables, sunscreen & excursion insurance",
-      quantity: 1,
-      unitPrice: charge.levy,
+      quantity: Math.round(charge.levy / WEEKLY_LEVY),
+      unitPrice: WEEKLY_LEVY,
       amount: charge.levy,
     });
   }
